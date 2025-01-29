@@ -3,6 +3,7 @@
 
 #include <CL/opencl.hpp>
 #include <iostream>
+#include <fstream>
 
 int main(int argc, char** argv)
 {
@@ -63,15 +64,12 @@ int main(int argc, char** argv)
 	// Building the Kernel 
 	// - A Kernel must return void
 	// - global: means pointing to global memory
-	std::string kernel_code = 
-		"void kernel simple_add(global const int* A, global const int* B, global int* C) {"
-		"	int id = get_global_id(0);"
-		"	C[id] = A[id] + B[id];"
-		"}";
+	std::ifstream file("kernels.cl");
+	std::string kernel_code((std::istreambuf_iterator<char>(file)),
+			        (std::istreambuf_iterator<char>()));
 	
 	// Add the Kernel to the Sources
 	sources.push_back({ kernel_code.c_str(), kernel_code.length() });
-	
 	// Then we create a program which links the OpenCL code to the context
 	cl::Program program(context, sources);
 
