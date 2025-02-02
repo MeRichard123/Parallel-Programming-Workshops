@@ -33,4 +33,9 @@ kernel void add(global const int* A, global const int* B, global int* C) {
 }
 ```
 - Almost a regualar C function except it is marked as a `kernel` 
-- The `global` label indicates that 
+- The `global` label indicates that the parameters are in main memory. 
+- The Kernel is launched in parallel on as many CUs as possible as many times as needed.
+	- Each launch gets a separate ID which is obtained by the `get_global_id(0)` function.
+	- The total number of kernels launched will be equal to the vector length.
+	- This is specified in `enqueueNDRangeKernel` using an `NDRange`
+- We can have multiple kernels in the .cl file, we specify the one we want to use using the kernel initialiser `cl::Kernel(program, "mult")`.

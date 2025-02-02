@@ -1,17 +1,23 @@
 //a simple OpenCL kernel which adds two vectors A and B together into a third vector C
-kernel void add(global const int* A, global const int* B, global int* C) {
+__kernel void add(global const int* A, global const int* B, global int* C) {
 	int id = get_global_id(0);
 	C[id] = A[id] + B[id];
 }
 
+__kernel void mul(global const int* A, global const int* B, global int* C) {
+	int id = get_global_id(0);
+	C[id] = A[id] * B[id];
+}
+
+
 //a simple smoothing kernel averaging values in a local window (radius 1)
-kernel void avg_filter(global const int* A, global int* B) {
+__kernel void avg_filter(global const int* A, global int* B) {
 	int id = get_global_id(0);
 	B[id] = (A[id - 1] + A[id] + A[id + 1])/3;
 }
 
 //a simple 2D kernel
-kernel void add2D(global const int* A, global const int* B, global int* C) {
+__kernel void add2D(global const int* A, global const int* B, global int* C) {
 	int x = get_global_id(0);
 	int y = get_global_id(1);
 	int width = get_global_size(0);
