@@ -36,7 +36,6 @@ int main(int argc, char **argv) {
 		std::cout << "Runinng on " << GetPlatformName(platform_id) << ", " << GetDeviceName(platform_id, device_id) << std::endl;
 
 		cl::CommandQueue queue(context, CL_QUEUE_PROFILING_ENABLE);
-		cl::Event prof_event;
 		cl::Program::Sources sources;
 
 		AddSources(sources, "kernels/my_kernels.cl");
@@ -101,6 +100,7 @@ int main(int argc, char **argv) {
 		kernel_addf.setArg(1, buffer_B);
 		kernel_addf.setArg(2, buffer_C);
 		
+		cl::Event prof_event;
 		/*
 		queue.enqueueNDRangeKernel(kernel_mul, cl::NullRange, 
 				cl::NDRange(vector_elements), cl::NullRange, NULL, &prof_event);
@@ -112,8 +112,7 @@ int main(int argc, char **argv) {
 		queue.enqueueNDRangeKernel(kernel_multadd, cl::NullRange, 
 				cl::NDRange(vector_elements), cl::NullRange, NULL, &prof_event);
 		*/
-		queue.enqueueNDRangeKernel(kernel_addf, cl::NullRange, 
-				cl::NDRange(vector_elements), cl::NullRange, NULL, &prof_event);
+		queue.enqueueNDRangeKernel(kernel_addf, cl::NullRange,cl::NDRange(vector_elements), cl::NullRange, NULL, &prof_event);
 
 		//4.3 Copy the result from device to host
 		queue.enqueueReadBuffer(buffer_C, CL_TRUE, 0, vector_size, &C[0]);

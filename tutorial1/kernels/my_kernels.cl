@@ -16,7 +16,9 @@ __kernel void multadd(global const int* A, global const int* B, global int* C) {
 }
 
 __kernel void addf(global const float* A, global const float* B, global float* C) {
+	int id = get_global_id(0);	
 	C[id] = A[id] + B[id];
+
 }
 
 //a simple smoothing kernel averaging values in a local window (radius 1)
