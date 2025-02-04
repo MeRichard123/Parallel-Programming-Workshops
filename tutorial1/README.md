@@ -39,3 +39,4 @@ kernel void add(global const int* A, global const int* B, global int* C) {
 	- The total number of kernels launched will be equal to the vector length.
 	- This is specified in `enqueueNDRangeKernel` using an `NDRange`
 - We can have multiple kernels in the .cl file, we specify the one we want to use using the kernel initialiser `cl::Kernel(program, "mult")`.
+	- In this case we specify using the "mult" kernel.

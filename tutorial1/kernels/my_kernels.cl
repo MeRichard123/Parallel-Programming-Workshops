@@ -10,6 +10,15 @@ __kernel void mul(global const int* A, global const int* B, global int* C) {
 }
 
 
+__kernel void multadd(global const int* A, global const int* B, global int* C) {
+	int id = get_global_id(0);
+	C[id] = (A[id] * B[id]) + B[id];
+}
+
+__kernel void addf(global const float* A, global const float* B, global float* C) {
+	C[id] = A[id] + B[id];
+}
+
 //a simple smoothing kernel averaging values in a local window (radius 1)
 __kernel void avg_filter(global const int* A, global int* B) {
 	int id = get_global_id(0);
