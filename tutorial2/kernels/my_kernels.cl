@@ -10,7 +10,47 @@ kernel void filter_r(global const uchar* A, global uchar* B) {
 	int colour_channel = id / image_size; // 0 - red, 1 - green, 2 - blue
 
 	//this is just a copy operation, modify to filter out the individual colour channels
-	B[id] = A[id];
+	if (colour_channel == 0)
+	{ 
+		B[id] = A[id];
+	}
+	else 
+	{
+		B[id] = 0;
+	}
+}
+
+// Invert Kernel 
+__kernel void invert(global const uchar* A, global uchar* B) {
+	int width = get_global_size(0); //image width in pixels
+	int height = get_global_size(1); //image height in pixels	
+	int image_size = width * height; 
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int c = get_global_id(2);
+	
+	int id = x + y*width + c*image_size;
+	B[id] = 255 - A[id];
+
+}
+
+// Rgb2Gray
+__kernel void rgb2gray(global const uchar* A, global uchar* B) {
+	int width = get_global_size(0); //image width in pixels
+	int height = get_global_size(1); //image height in pixels
+	int image_size = width*height; //image size in pixels
+	int channels = get_global_size(2); //number of colour channels: 3 for RGB
+
+	int x = get_global_id(0); //current x coord.
+	int y = get_global_id(1); //current y coord.
+	int c = get_global_id(2); //current colour channel
+
+	int OffsetG = width * height;
+	int OffsetB = 2 * width * height;
+
+	int id = x + y * width;
+	B[id] = (0.2126 * A[id]) + (0.7152 * A[id + OffsetG]) + (0.0722 * A[id + OffsetB]); 
+
 }
 
 //simple ND identity kernel
