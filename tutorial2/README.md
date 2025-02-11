@@ -28,4 +28,33 @@ kernel_add.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(device)
 ```
 
 # Map Pattern
-- The map pattern describes the same computation performed on different data without the need for communication between work items. 
+- The map pattern describes the same computation performed on different data without the need for communication between work items.
+- It is an independent element wise operation. 
+- Often used in conjunction with reduce.
+
+# Stencil Pattern
+- Takes mutliple data inputs from a pre-defined neighbourhood and combines them into a single value. 
+	- Like running a convolution using a kernel
+- Like Map, each task/work-item is independent.
+- This is used in signal processing for noise filtering, blurring and sharpening.
+## 1D Stencil
+```cpp
+// a simple smoothing kernel averaging values in a local window (radius 1)
+__kernel void avg_filter(global const int* A, global int* B) {
+        int id = get_global_id(0);
+        B[id] = (A[id - 1] + A[id] + A[id + 1])/3;
+}
+
+```
+- This operation is equivalent to a simple smoothing filter, which can be applied to filter out noise from data (e.g. audio signal).
+
+## 2D Stencil 
+- In Images we often store the pixels in 2D
+- The kernel dimensionality is specified within a Kernel execution command.
+- In 2D, the first parameter of NDRange specifes the number of columns (width), and the second the rows.
+- For a 5x2 array we use:
+```cpp
+queue.enqueueNDRangeKernel(kernel_add, cl::NullRange, cl::NDRange(5, 2), cl::NullRange);
+```
+- Now that the global indices are arranged in two dimensions, the `get_global_size(d)` function.
+	- returns the number of elements along the dth dimension. 

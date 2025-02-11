@@ -99,6 +99,11 @@ int main(int argc, char **argv) {
 		kernel_addf.setArg(0, buffer_A);
 		kernel_addf.setArg(1, buffer_B);
 		kernel_addf.setArg(2, buffer_C);
+
+		cl::Kernel kernel_add2d = cl::Kernel(program, "add2d");
+		kernel_add2d.setArg(0, buffer_A);
+		kernel_add2d.setArg(1, buffer_B);
+		kernel_add2d.setArg(2, buffer_C);
 		
 		cl::Event prof_event;
 		/*
@@ -112,7 +117,7 @@ int main(int argc, char **argv) {
 		queue.enqueueNDRangeKernel(kernel_multadd, cl::NullRange, 
 				cl::NDRange(vector_elements), cl::NullRange, NULL, &prof_event);
 		*/
-		queue.enqueueNDRangeKernel(kernel_addf, cl::NullRange,cl::NDRange(vector_elements), cl::NullRange, NULL, &prof_event);
+		queue.enqueueNDRangeKernel(kernel_add2d, cl::NullRange,cl::NDRange(vector_elements), cl::NullRange, NULL, &prof_event);
 
 		//4.3 Copy the result from device to host
 		queue.enqueueReadBuffer(buffer_C, CL_TRUE, 0, vector_size, &C[0]);

@@ -121,3 +121,4 @@ kernel void convolutionND(global const uchar* A, global uchar* B, constant float
 
 	B[id] = (uchar)result;
 }
+

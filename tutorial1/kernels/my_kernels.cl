@@ -24,7 +24,7 @@ __kernel void addf(global const float* A, global const float* B, global float* C
 //a simple smoothing kernel averaging values in a local window (radius 1)
 __kernel void avg_filter(global const int* A, global int* B) {
 	int id = get_global_id(0);
-	B[id] = (A[id - 1] + A[id] + A[id + 1])/3;
+	B[id] = (A[id - 5] + A[id] + A[id + 5])/3;
 }
 
 //a simple 2D kernel
