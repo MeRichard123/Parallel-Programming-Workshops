@@ -27,3 +27,5 @@ cerr << kernel_add.getWorkGroupInfo<CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE
 kernel_add.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(device)
 ```
 
+# Map Pattern
+- The map pattern describes the same computation performed on different data without the need for communication between work items. 

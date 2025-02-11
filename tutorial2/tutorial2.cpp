@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
 	//---------- handle command line options such as device selection, verbosity, etc.
 	int platform_id = 0;
 	int device_id = 0;
-	string image_filename = "test_large.ppm";
+	string image_filename = "test.ppm";
 
 	for (int i = 1; i < argc; i++) {
 		if ((strcmp(argv[i], "-p") == 0) && (i < (argc - 1))) { platform_id = atoi(argv[++i]); }
@@ -81,6 +81,8 @@ int main(int argc, char **argv) {
 		//Copy images to device memory
 		queue.enqueueWriteBuffer(dev_image_input, CL_TRUE, 0, image_input.size(), &image_input.data()[0]);
 //		queue.enqueueWriteBuffer(dev_convolution_mask, CL_TRUE, 0, convolution_mask.size()*sizeof(float), &convolution_mask[0]);
+		
+		
 
 		//Setup and execute the kernel (i.e. device code)
 		cl::Kernel kernel = cl::Kernel(program, "rgb2gray");
@@ -91,7 +93,10 @@ int main(int argc, char **argv) {
 		// Profiling
 		cl::Event prof_event;
 
-		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(image_input.size()), cl::NullRange, NULL, &prof_event);
+		std::cout << std::to_string(image_input.size()) << '\n';
+		// std::cout << std::to_string(image_output.size()) << '\n';
+
+		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(image_input.size()/3), cl::NullRange, NULL, &prof_event);
 
 		vector<unsigned char> output_buffer(image_input.size());
 		//Copy the result from device to host
