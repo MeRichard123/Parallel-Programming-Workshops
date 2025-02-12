@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
 		queue.enqueueNDRangeKernel(kernel_multadd, cl::NullRange, 
 				cl::NDRange(vector_elements), cl::NullRange, NULL, &prof_event);
 		*/
-		queue.enqueueNDRangeKernel(kernel_add2d, cl::NullRange,cl::NDRange(vector_elements), cl::NullRange, NULL, &prof_event);
+		queue.enqueueNDRangeKernel(kernel_add, cl::NullRange,cl::NDRange(vector_elements), cl::NullRange, NULL, &prof_event);
 
 		//4.3 Copy the result from device to host
 		queue.enqueueReadBuffer(buffer_C, CL_TRUE, 0, vector_size, &C[0]);

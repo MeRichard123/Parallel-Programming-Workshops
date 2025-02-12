@@ -69,9 +69,10 @@ kernel void identityND(global const uchar* A, global uchar* B) {
 
 	int x = get_global_id(0); //current x coord.
 	int y = get_global_id(1); //current y coord.
-	int c = get_global_id(2); //current colour channel
+	int z = get_global_id(2); //current z coord.
+	int c = get_global_id(3); //current colour channel
 
-	int id = x + y*width + c*image_size; //global id in 1D space
+	int id = x + y*width + z*width * height + c*image_size; //global id in 3D space
 
 	B[id] = A[id];
 }
@@ -90,9 +91,10 @@ kernel void avg_filterND(global const uchar* A, global uchar* B) {
 	int id = x + y*width + c*image_size; //global id in 1D space
 
 	uint result = 0;
+	int w_range = 1;
 
-	for (int i = (x-1); i <= (x+1); i++)
-	for (int j = (y-1); j <= (y+1); j++) 
+	for (int i = (x-w_range); i <= (x+w_range); i++)
+	for (int j = (y-w_range); j <= (y+w_range); j++) 
 		result += A[i + j*width + c*image_size];
 
 	result /= 9;

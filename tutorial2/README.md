@@ -11,7 +11,10 @@
 
 ## OpenCL Function 
 - `get_global_id` - gets the current id for each work-items
-- We can define the work-group size manually when calleding the kernel from the host
+- Work items are executed in an arbitrary order so one cannot make any assumptions which work item is executed first.
+- `get_local_id` returns a work item id within a specific work group. 
+	- The values vary from 0 to M1 where M is the size of a work group.
+- We can define the work-group size manually when calling the kernel from the host using the last paramter
 ```cpp
 queue.enqueueNDRangeKernel(kernel_add, cl::NullRange, cl::NDRange(vector_elements), cl::NDRange(local_size));
 ```
