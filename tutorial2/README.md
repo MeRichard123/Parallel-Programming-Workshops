@@ -108,4 +108,4 @@ __kernel void avg_filter(global const int* A, global int* B) {
 queue.enqueueNDRangeKernel(kernel_add, cl::NullRange, cl::NDRange(5, 2), cl::NullRange);
 ```
 - Now that the global indices are arranged in two dimensions, the `get_global_size(d)` function.
-	- returns the number of elements along the dth dimension. 
+	- returns the number of elements along the dth dimension.

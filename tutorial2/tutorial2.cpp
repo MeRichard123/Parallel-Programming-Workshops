@@ -54,6 +54,7 @@ int main(int argc, char **argv) {
 			0, 0, 0,
 			-1, -2, -1
 		};
+		float gamma_val = 1.5f;
 
 		//-----------host operations
 		//Select computing devices
@@ -123,16 +124,22 @@ int main(int argc, char **argv) {
 		edgingX.setArg(1, dev_image_output);
 		edgingX.setArg(2, dev_sobel_gx);
 
+		cl::Kernel gamma_correct = cl::Kernel(program, "gamma_transform");
+		gamma_correct.setArg(0, dev_image_input);
+		gamma_correct.setArg(1, dev_image_output);
+		gamma_correct.setArg(2, gamma_val);
+
 		// Profiling
 		cl::Event prof_event;
 
 		std::cout << std::to_string(image_input.size()) << '\n';
 		// std::cout << std::to_string(image_output.size()) << '\n';
 		
-		queue.enqueueNDRangeKernel(conv_kernel, cl::NullRange, cl::NDRange(width, height, channels), cl::NullRange, NULL, &prof_event);
+		//queue.enqueueNDRangeKernel(conv_kernel, cl::NullRange, cl::NDRange(width, height, channels), cl::NullRange, NULL, &prof_event);
 		//queue.enqueueNDRangeKernel(blur_kernel, cl::NullRange, cl::NDRange(width, height, channels), cl::NullRange, NULL, &prof_event);
 		//queue.enqueueNDRangeKernel(gray_kernel, cl::NullRange, cl::NDRange(image_input.size()/3), cl::NullRange, NULL, &prof_event);
 		
+		queue.enqueueNDRangeKernel(gamma_correct, cl::NullRange, cl::NDRange(image_input.size()/3), cl::NullRange, NULL, &prof_event);
 		//queue.enqueueNDRangeKernel(edgingX, cl::NullRange, cl::NDRange(width, height, channels), cl::NullRange, NULL, &prof_event);
 		
 		vector<unsigned char> output_buffer(image_input.size());
