@@ -13,8 +13,8 @@ kernel void reduce_add_1(global const int* A, global int* B) {
 		Pos 0: 3 + 7 = 10
 		Pos 4: 11 + 15 = 26
 	Step 3: [10, 2, 7, 4, 26, 6 ,15, 8] // stride 4
-		Pos 0: 10 + 28 = 38
-	Step 4: [38, 2, 7, 4, 26, 6, 15, 8] // stride 8
+		Pos 0: 10 + 26 = 36
+	Step 4: [36, 2, 7, 4, 26, 6, 15, 8] // stride 8
 	*/
 
 	// assumes elements are placed at powers of 2 so only works for arrays
