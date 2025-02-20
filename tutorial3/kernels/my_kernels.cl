@@ -1,7 +1,29 @@
 //fixed 4 step reduce
 kernel void reduce_add_1(global const int* A, global int* B) {
-	int id = get_global_id(0);
-	int N = get_global_size(0);
+	/*
+
+	Input: [1, 2, 3, 4, 5, 6, 7, 8]
+	Step 1: [1, 2, 3, 4, 5, 6, 7, 8] // Copy
+		Pos 0: 1 + 2 = 3
+		Pos 2: 3 + 4 = 7
+		Pos 4: 5 + 6 = 11
+		Pos 6: 7 + 8 = 15
+		(Pos 1,3,5,7 unchanged)
+	Step 2: [3, 2, 7, 4, 11, 6, 15, 8] // pairs
+		Pos 0: 3 + 7 = 10
+		Pos 4: 11 + 15 = 26
+	Step 3: [10, 2, 7, 4, 26, 6 ,15, 8] // stride 4
+		Pos 0: 10 + 28 = 38
+	Step 4: [38, 2, 7, 4, 26, 6, 15, 8] // stride 8
+	*/
+
+	//; assumes elements are placed at powers of 2 so only works for arrays
+	//; where there are 2^n elements
+
+
+	//;Fixed size parallel prefix sum 
+	int id = get_global_id(0); // current work-item id
+	int N = get_global_size(0); // number of work-items
 
 	B[id] = A[id]; //copy input to output
 
@@ -10,19 +32,23 @@ kernel void reduce_add_1(global const int* A, global int* B) {
 	//perform reduce on the output array
 	//modulo operator is used to skip a set of values (e.g. 2 in the next line)
 	//we also check if the added element is within bounds (i.e. < N)
+	//; First we use a stride of 2. so we add every 2nd element
 	if (((id % 2) == 0) && ((id + 1) < N)) 
 		B[id] += B[id + 1];
 
 	barrier(CLK_GLOBAL_MEM_FENCE);
-
+	
+	//; next a stride of 4 combines every 4th element
 	if (((id % 4) == 0) && ((id + 2) < N)) 
 		B[id] += B[id + 2];
 
 	barrier(CLK_GLOBAL_MEM_FENCE);
-
+	
+	//; stride of 8 combines every 8th
 	if (((id % 8) == 0) && ((id + 4) < N)) 
 		B[id] += B[id + 4];
-
+	
+	//; stride of 16 combines every 16th element
 	barrier(CLK_GLOBAL_MEM_FENCE);
 
 	if (((id % 16) == 0) && ((id + 8) < N)) 
@@ -35,6 +61,8 @@ kernel void reduce_add_2(global const int* A, global int* B) {
 	int N = get_global_size(0);
 
 	B[id] = A[id];
+
+	// this one loops the above but still only works for powers of 2
 
 	barrier(CLK_GLOBAL_MEM_FENCE);
 
