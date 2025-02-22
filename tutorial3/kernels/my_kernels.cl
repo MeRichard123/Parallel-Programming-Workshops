@@ -125,14 +125,96 @@ kernel void reduce_add_4(global const int* A, global int* B, local int* scratch)
 }
 
 //a very simple histogram implementation
-kernel void hist_simple(global const int* A, global int* H) { 
+kernel void hist_simple(global const int* A, global int* H, const int nr_bins, 
+			       const int neutral_element, const int min_value,
+			       const int max_value) { 
 	int id = get_global_id(0);
 
 	//assumes that H has been initialised to 0
-	int bin_index = A[id];//take value as a bin index
+	int value = A[id];//take value from input
+	
+	if (value == neutral_element) 
+	{
+		return;
+	}
+
+	int bin_width = (float)(max_value - min_value) / nr_bins;
+	int bin_index = (value - min_value) / bin_width;
+
+
+	if (bin_index < 0 || bin_index >= nr_bins) 
+	{
+		bin_index = nr_bins - 1; // add to last bin
+	}
 
 	atomic_inc(&H[bin_index]);//serial operation, not very efficient!
 }
+
+// More complex histogram kernel
+__kernel void reduce_min(global const int* A, global int* B, local int* scratch) {
+	int id = get_global_id(0);
+	int lid = get_local_id(0);
+	int N = get_local_size(0);
+
+	// cache all values in the scratch buffer
+	scratch[lid] = A[id];
+
+	barrier(CLK_LOCAL_MEM_FENCE); // wait for threads
+
+	// reduce to min
+	for (int i = 1; i < N; i *= 2) {
+		if(!(lid % (i * 2)) && ((lid +i) < N)) {
+			scratch[lid] = min(scratch[lid], scratch[lid + i]);
+		}
+		barrier(CLK_LOCAL_MEM_FENCE); // wait for threads
+	}
+
+	// copy to output 
+	if (!lid) {
+		atomic_min(&B[0], scratch[lid]);
+	}
+}
+
+__kernel void reduce_max(global const int* A, global int* B, local int* scratch) {
+	int id = get_global_id(0);
+	int lid = get_local_id(0);
+	int N = get_local_size(0);
+
+	// cache all values in the scratch buffer
+	scratch[lid] = A[id];
+
+	barrier(CLK_LOCAL_MEM_FENCE); // wait for threads
+
+	// reduce to max
+	for (int i = 1; i < N; i *= 2) {
+		if(!(lid % (i * 2)) && ((lid +i) < N)) {
+			scratch[lid] = max(scratch[lid], scratch[lid + i]);
+		}
+		barrier(CLK_LOCAL_MEM_FENCE); // wait for threads
+	}
+
+	// copy to output 
+	if (!lid) {
+		atomic_max(&B[0], scratch[lid]);
+	}
+}
+
+kernel void hist_complex(global const int* A, global int* H, const int nr_bins, 
+			 const int min_value, const int max_value) { 
+	int id = get_global_id(0);
+
+	int bin_width = (float)(max_value - min_value) / nr_bins;
+	int bin_index = (int)((A[id] - min_value) / bin_width);
+
+
+	if (bin_index < 0 || bin_index >= nr_bins) 
+	{
+		bin_index = nr_bins - 1; // add to last bin
+	}
+
+	atomic_inc(&H[bin_index]);//serial operation, not very efficient!
+}
+
 
 //Hillis-Steele basic inclusive scan
 //requires additional buffer B to avoid data overwrite 
