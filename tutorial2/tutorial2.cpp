@@ -39,9 +39,9 @@ int main(int argc, char **argv) {
 		CImgDisplay disp_input(image_input,"input");
 
 		//a 3x3 convolution mask implementing an averaging filter
-		std::vector<float> convolution_mask = { 1.f / 9, 1.f / 9, 1.f / 9,
-												1.f / 9, 1.f / 9, 1.f / 9,
-												1.f / 9, 1.f / 9, 1.f / 9 };
+		std::vector<float> convolution_mask = { 1.f / 9, 1.f / 9, 1.f / 9, 1.f / 9, 1.f / 9,
+							1.f / 9, 1.f / 9, 1.f / 9, 1.f / 9, 1.f / 9,
+							1.f / 9, 1.f / 9, 1.f / 9, 1.f / 9, 1.f / 9 };
 		
 
 		std::vector<int> sobel_Gx = {
@@ -55,6 +55,8 @@ int main(int argc, char **argv) {
 			-1, -2, -1
 		};
 		float gamma_val = 1.5f;
+		int mask_size = 2;
+		int conv_size = 5;
 
 		//-----------host operations
 		//Select computing devices
@@ -108,6 +110,7 @@ int main(int argc, char **argv) {
 		cl::Kernel blur_kernel = cl::Kernel(program, "avg_filterND");
 		blur_kernel.setArg(0, dev_image_input);
 		blur_kernel.setArg(1, dev_image_output);
+		blur_kernel.setArg(2, mask_size);
 
 		
 		cl::Kernel gray_kernel = cl::Kernel(program, "rgb2gray");
@@ -118,6 +121,7 @@ int main(int argc, char **argv) {
 		conv_kernel.setArg(0, dev_image_input);
 		conv_kernel.setArg(1, dev_image_output);
 		conv_kernel.setArg(2, dev_convolution_mask);
+		conv_kernel.setArg(3, conv_size);
 
 		cl::Kernel edgingX = cl::Kernel(program, "convolutionND");
 		edgingX.setArg(0, dev_image_input);
@@ -135,11 +139,11 @@ int main(int argc, char **argv) {
 		std::cout << std::to_string(image_input.size()) << '\n';
 		// std::cout << std::to_string(image_output.size()) << '\n';
 		
-		//queue.enqueueNDRangeKernel(conv_kernel, cl::NullRange, cl::NDRange(width, height, channels), cl::NullRange, NULL, &prof_event);
+		queue.enqueueNDRangeKernel(conv_kernel, cl::NullRange, cl::NDRange(width, height, channels), cl::NullRange, NULL, &prof_event);
 		//queue.enqueueNDRangeKernel(blur_kernel, cl::NullRange, cl::NDRange(width, height, channels), cl::NullRange, NULL, &prof_event);
 		//queue.enqueueNDRangeKernel(gray_kernel, cl::NullRange, cl::NDRange(image_input.size()/3), cl::NullRange, NULL, &prof_event);
 		
-		queue.enqueueNDRangeKernel(gamma_correct, cl::NullRange, cl::NDRange(image_input.size()/3), cl::NullRange, NULL, &prof_event);
+		//queue.enqueueNDRangeKernel(gamma_correct, cl::NullRange, cl::NDRange(image_input.size()/3), cl::NullRange, NULL, &prof_event);
 		//queue.enqueueNDRangeKernel(edgingX, cl::NullRange, cl::NDRange(width, height, channels), cl::NullRange, NULL, &prof_event);
 		
 		vector<unsigned char> output_buffer(image_input.size());

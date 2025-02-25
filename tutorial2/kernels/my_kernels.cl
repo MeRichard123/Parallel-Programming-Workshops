@@ -107,7 +107,7 @@ __kernel void gamma_transform(global const uchar* A, global uchar* B, const floa
 }
 
 //2D averaging filter
-kernel void avg_filterND(global const uchar* A, global uchar* B) {
+kernel void avg_filterND(global const uchar* A, global uchar* B, const int range) {
 	int width = get_global_size(0); //image width in pixels
 	int height = get_global_size(1); //image height in pixels
 	int image_size = width*height; //image size in pixels
@@ -120,19 +120,25 @@ kernel void avg_filterND(global const uchar* A, global uchar* B) {
 	int id = x + y*width + c*image_size; //global id in 1D space
 
 	uint result = 0;
-	int w_range = 1;
+	int w_range = 4;
 
-	for (int i = (x-w_range); i <= (x+w_range); i++)
-	for (int j = (y-w_range); j <= (y+w_range); j++) 
-		result += A[i + j*width + c*image_size];
+	for (int i = max(0, x-w_range); i <= min(width - 1, x + w_range); i++)
+	{
+		for (int j = max(0, y-w_range); j <= min(height - 1, y + w_range); j++)
+		{
+			result += A[i + j*width + c*image_size];
+		}
+	}
 
-	result /= 9;
+	int kernel_size = (2 * w_range + 1) * (2 * w_range + 1);
+	result /= kernel_size;
 
 	B[id] = (uchar)result;
 }
 
+
 //2D 3x3 convolution kernel
-kernel void convolutionND(global const uchar* A, global uchar* B, constant float* mask) {
+__kernel void convolutionND(__global const uchar* A, global uchar* B, __constant const float* mask, const int mask_size) {
 	int width = get_global_size(0); //image width in pixels
 	int height = get_global_size(1); //image height in pixels
 	int image_size = width*height; //image size in pixels
@@ -145,10 +151,24 @@ kernel void convolutionND(global const uchar* A, global uchar* B, constant float
 	int id = x + y*width + c*image_size; //global id in 1D space
 
 	float result = 0;
+	int offset = mask_size/ 2;
 
-	for (int i = (x-1); i <= (x+1); i++)
-	for (int j = (y-1); j <= (y+1); j++) 
-		result += A[i + j*width + c*image_size]*mask[i-(x-1) + j-(y-1)];
+   	// Iterate over the mask region
+   	for (int i = -offset; i <= offset; i++) {
+		 for (int j = -offset; j <= offset; j++) {
+			  int xi = x + i;
+			  int yi = y + j;
+
+			  if (xi >= 0 && xi < width && yi >= 0 && yi < height) {
+			  	int mask_x = i + offset;  // Translate mask coordinates to the linear index
+				int mask_y = j + offset;
+				int mask_index = mask_x + mask_y * mask_size; // Linear index in the mask
+				result += A[xi + yi * width + c * image_size] * mask[mask_index];
+		    	  }
+		 }
+	}
+	// Clamping the result before storing it in B
+	result = clamp(result, 0.0f, 255.0f);  // Ensure the result is within valid range for uchar
 
 	B[id] = (uchar)result;
 }
