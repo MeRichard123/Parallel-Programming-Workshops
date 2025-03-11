@@ -59,8 +59,8 @@ int main(int argc, char **argv) {
 
 		//----------- memory allocation
 		//host - input
-		//std::vector<mytype> A(10, 1);//allocate 10 elements with an initial value 1 - their sum is 10 so it should be easy to check the results!
-		std::vector<mytype> A = {-5, 1,1,1,1,1,5,5,5,5,5, 12, 15, 11, 12, 2, 3,4,5, 6};
+		std::vector<mytype> A(10, 1);//allocate 10 elements with an initial value 1 - their sum is 10 so it should be easy to check the results!
+		//std::vector<mytype> A = {-5, 1,1,1,1,1,5,5,5,5,5, 12, 15, 11, 12, 2, 3,4,5, 6};
 
 		//the following part adjusts the length of the input vector so it can be run for a specific workgroup size
 		//if the total input length is divisible by the workgroup size
@@ -106,7 +106,6 @@ int main(int argc, char **argv) {
 		//copy array A to and initialise other arrays on device memory
 		queue.enqueueWriteBuffer(buffer_A, CL_TRUE, 0, input_size, &A[0]);
 		queue.enqueueFillBuffer(buffer_B, 0, 0, output_size);//zero B buffer on device memory
-		
 		queue.enqueueWriteBuffer(buffer_min, CL_TRUE, 0, output_size, &min_value_vec[0]);
     		queue.enqueueWriteBuffer(buffer_max, CL_TRUE, 0, output_size, &max_value_vec[0]);
 
@@ -117,7 +116,6 @@ int main(int argc, char **argv) {
 		kernel_1.setArg(1, buffer_B);
 		kernel_1.setArg(2, cl::Local(local_size*sizeof(mytype)));//local memory size
 		
-		
 		cl::Kernel simple_hist = cl::Kernel(program, "hist_simple");
 		simple_hist.setArg(0, buffer_A);
 		simple_hist.setArg(1, buffer_B);
@@ -126,27 +124,26 @@ int main(int argc, char **argv) {
 		simple_hist.setArg(4, min_value);
 		simple_hist.setArg(5, max_value);
 
-
 		// Compute min and max
 		cl::Kernel reduce_min_kernel(program, "reduce_min");
 		reduce_min_kernel.setArg(0, buffer_A);
 		reduce_min_kernel.setArg(1, buffer_min);
 		reduce_min_kernel.setArg(2, cl::Local(local_size*sizeof(mytype)));//local memory size
-		queue.enqueueNDRangeKernel(reduce_min_kernel, cl::NullRange, cl::NDRange(input_elements), cl::NDRange(local_size));
+		//queue.enqueueNDRangeKernel(reduce_min_kernel, cl::NullRange, cl::NDRange(input_elements), cl::NDRange(local_size));
 
 		cl::Kernel reduce_max_kernel(program, "reduce_max");
 		reduce_max_kernel.setArg(0, buffer_A);
 		reduce_max_kernel.setArg(1, buffer_max);
 		reduce_max_kernel.setArg(2, cl::Local(local_size*sizeof(mytype)));
-		queue.enqueueNDRangeKernel(reduce_max_kernel, cl::NullRange, cl::NDRange(input_elements), cl::NDRange(local_size));
+		//queue.enqueueNDRangeKernel(reduce_max_kernel, cl::NullRange, cl::NDRange(input_elements), cl::NDRange(local_size));
 
 		
 		// Read min and max values back to host
-    		queue.enqueueReadBuffer(buffer_min, CL_TRUE, 0, output_size, &min_value_vec[0]);
-    		queue.enqueueReadBuffer(buffer_max, CL_TRUE, 0, output_size, &max_value_vec[0]);
+    		//queue.enqueueReadBuffer(buffer_min, CL_TRUE, 0, output_size, &min_value_vec[0]);
+    		//queue.enqueueReadBuffer(buffer_max, CL_TRUE, 0, output_size, &max_value_vec[0]);
 			
-		std::cout << min_value_vec[0] << std::endl;
-		std::cout << max_value_vec[0] << std::endl;
+		//std::cout << min_value_vec[0] << std::endl;
+		//std::cout << max_value_vec[0] << std::endl;
 
 		// Run histogram kernel
 		cl::Kernel hist_kernel(program, "hist_complex");
@@ -155,24 +152,38 @@ int main(int argc, char **argv) {
 		hist_kernel.setArg(2, nr_bins);
 		hist_kernel.setArg(3, min_value_vec[0]);
 		hist_kernel.setArg(4, max_value_vec[0]);
+			
+		cl::Kernel scan_add_kernel(program, "scan_add");
+		scan_add_kernel.setArg(0, buffer_A);
+		scan_add_kernel.setArg(1, buffer_B);
+		scan_add_kernel.setArg(2, cl::Local(input_size*sizeof(float)));
+		scan_add_kernel.setArg(3, cl::Local(input_size*sizeof(float))); 
 
 
 		// Perf Events 
 		cl::Event prof_event;
 
 		//call all kernels in a sequence
-		queue.enqueueNDRangeKernel(hist_kernel, cl::NullRange, cl::NDRange(input_elements), cl::NDRange(local_size), NULL, &prof_event);
+		//queue.enqueueNDRangeKernel(hist_kernel, cl::NullRange, cl::NDRange(input_elements), cl::NDRange(local_size), NULL, &prof_event);
 		//queue.enqueueNDRangeKernel(kernel_1, cl::NullRange, cl::NDRange(input_elements), cl::NDRange(CL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE), NULL, &prof_event);
 		//queue.enqueueNDRangeKernel(simple_hist, cl::NullRange, cl::NDRange(input_elements), cl::NDRange(local_size), NULL, &prof_event);
+	
+		queue.enqueueNDRangeKernel(scan_add_kernel, cl::NullRange, 
+				cl::NDRange(input_elements), cl::NDRange(local_size), 
+				NULL, &prof_event
+				);
 
 		//Copy the result from device to host
 		queue.enqueueReadBuffer(buffer_B, CL_TRUE, 0, output_size, &B[0]);
-
+		
 		std::cout << "A = " << A << std::endl;
-
+		std::cout << "B = " << B << std::endl;
+		
+#if 0
 		for (int i = 0; i < nr_bins; ++i) {
         		std::cout << "Bin " << i << ": " << B[i] << std::endl;
-    		}
+		}
+#endif
 
 		std::cout << "Kernel Execution Time [ns]: " <<
 			prof_event.getProfilingInfo<CL_PROFILING_COMMAND_END>() -
