@@ -190,5 +190,5 @@ kernel void scan_add(__global const int* A, global int* B, local int* scratch_1,
 - Uses two local memory buffers which are swapped after each reduction step to avoid data being overwritten. 
 
 ## Blelloch Scan
-[https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda](CUDA OF PREFIX SUMS SCAN)
+[CUDA OF PREFIX SUMS SCAN](https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda)
 ## Blelloch Large Vector 
