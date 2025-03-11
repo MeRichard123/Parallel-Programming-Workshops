@@ -131,6 +131,30 @@ __kernel void hist_simple(global const int* A, global int* H, const int nr_bins,
 # Scan
 - Similar to reduction but it keeps all the partial results.
 - This pattern can be used to solve seemingly sequential probelms such as sorting or searching.
+## Hillis-Steele Scan
+- This is a cumulative sum, which is Span-Efficient
+- It needs an extra buffer to avoid overwriting data.
+- This is the inclusive version because it accounts for the current element.
+```c
+kernel void scan_hs(global int* A, global int* B) {
+	int id = get_global_id(0);
+	int N = get_global_size(0);
+	global int* C;
+
+	for (int stride = 1; stride < N; stride *= 2) {
+		B[id] = A[id];
+		if (id >= stride)
+			B[id] += A[id - stride];
+
+		barrier(CLK_GLOBAL_MEM_FENCE); //sync the step
+		
+
+		C = A; A = B; B = C; //swap A & B between steps
+	}
+}
+```
+- We can also do a double buffered version.
+- This uses local memory and improves the efficiency.
 ```c
 //a double-buffered version of the Hillis-Steele inclusive scan
 //requires two additional input arguments which correspond to two local buffers
@@ -164,3 +188,7 @@ kernel void scan_add(__global const int* A, global int* B, local int* scratch_1,
 }
 ```
 - Uses two local memory buffers which are swapped after each reduction step to avoid data being overwritten. 
+
+## Blelloch Scan
+[https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda](CUDA OF PREFIX SUMS SCAN)
+## Blelloch Large Vector 
