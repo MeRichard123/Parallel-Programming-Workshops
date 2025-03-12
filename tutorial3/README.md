@@ -21,18 +21,18 @@ __kernel void reduce_add_2(global const int* A, global int* B) {
 }
 ```
 - This code runs on the Global Memory Space within 1 workgroup. 
-- It is limited to the size of the workgroup, since we specify the size to be 10 it wil be 10 long.
+- It is limited to the size of the workgroup; since we specify the size to be 10, it will be 10 long.
 ```cpp
-std::vector<mytype> A(20, 1);//allocate 10 elements with an initial value 1 - their sum is 10 so it should be easy to check the results!
-size_t local_size = 10;
+std::vector<mytype> A(10, 1); //allocate 10 elements with an initial value 1 - their sum is 10 so it should be easy to check the results!
+size_t local_size = 10; // work-group size
 size_t padding_size = A.size() % local_size;
 ```
 
 ## Local Memory + Large Vectors 
-- Operating directly on global memory is slow, and affects performance. 
-- Commonly we use local memory (a form of cache) to speed it up.
-	- This is called a *Privatisation techniqiue* 
-- This time we store partial sums in local memory to make this faster.
+- Operating directly on global memory is slow and affects performance. 
+- Commonly, we use local memory (a cache form) to speed it up.
+	- This is called a *Privatisation technique* 
+- This time, we store partial sums in local memory to make this faster.
 ```cpp
 cl::Kernel kernel_1 = cl::Kernel(program, "reduce_add_3");
 kernel_1.setArg(0, buffer_A);
@@ -41,7 +41,7 @@ kernel_1.setArg(2, cl::Local(local_size*sizeof(mytype)));//local memory size
 ```
 And the kernel uses a scratch buffer:
 ```c
-//reduce using local memory (so called privatisation)
+//reduce using local memory (so-called privatisation)
 kernel void reduce_add_3(global const int* A, global int* B, local int* scratch) {
 	int id = get_global_id(0);
 	int lid = get_local_id(0);
@@ -63,7 +63,7 @@ kernel void reduce_add_3(global const int* A, global int* B, local int* scratch)
 	B[id] = scratch[lid];
 }
 ```
-- For larget datasets we combine results from individual work groups.
+- For large datasets, we combine results from individual work groups.
 - There are many ways to do this, but one way is via atomic functions.
 ```cpp
 kernel void reduce_add_4(global const int* A, global int* B, local int* scratch) {
@@ -93,7 +93,10 @@ kernel void reduce_add_4(global const int* A, global int* B, local int* scratch)
 ```
 # Scatter
 - The scatter pattern writes data into output locations indicated by an index array.
+- In scatter each thread (work-item) writes to a different memory location.
+	- Writes tend to be non-contiguous and depend on input data.
 - This is similar to gather, where an index array is used for looking at the input location.
+	- Each work-item reads from a different location in memory. 
 
 ## Histograms 
 - One of the simplest examples of scatter patterns is a histogram. 
@@ -114,27 +117,30 @@ __kernel void hist_simple(global const int* A, global int* H, const int nr_bins,
 		bin_index = nr_bins - 1; // add to last bin
 	}
 
+	// Scatter - writing to a computed location `bin_index`
+	// - Writes to H are scattered across the array
 	atomic_inc(&H[bin_index]);//serial operation, not very efficient!
 }
 ```
 - This function takes an array of values we want to run the histogram on
-- The array H is the output where each item in there is a bin. 
-- `nr_bins` we specify the number of bins to check if the bin overflows 
-	- in which case we just set that number to the final bin
-- and a neutral element which is used for padding and memory alignment which is ignored.
-- After all the checks we use an atomic operation to increment that bin without corrupting threads.
+- The array H is the output where each item is in a bin. 
+- `nr_bins`, we specify the number of bins to check if the bin overflows 
+	- in which case,e we just set that number to the final bin
+- and a neutral element, which is used for padding and memory alignment, which is ignored.
+- After all the checks, we use an atomic operation to increment that bin without corrupting threads.
 ### Atomics
 - Lowest-level independent operations which can run without interrupting other operations.
-- Low-Level and light weight version of a mutex (Mutexes tend to be built from atomics)
+- Low-level and lightweight version of a mutex (Mutexes tend to be built from atomics)
 - Incremented by a Thread
 
 # Scan
-- Similar to reduction but it keeps all the partial results.
-- This pattern can be used to solve seemingly sequential probelms such as sorting or searching.
-## Hillis-Steele Scan
+- Similar to reduction, but it keeps all the partial results.
+- This pattern can be used to solve seemingly sequential problems such as sorting or searching.
+## Hillis-Steele Scan (Parallel Prefix Scan)
 - This is a cumulative sum, which is Span-Efficient
-- It needs an extra buffer to avoid overwriting data.
+- An extra buffer is needed to avoid overwriting data.
 - This is the inclusive version because it accounts for the current element.
+- The *Prefix Sum* of an Array `A`, is an array `B`, where each element `B[I]` is the sum of all elements from `A[0]` to `A[i]`. 
 ```c
 kernel void scan_hs(global int* A, global int* B) {
 	int id = get_global_id(0);
@@ -142,22 +148,27 @@ kernel void scan_hs(global int* A, global int* B) {
 	global int* C;
 
 	for (int stride = 1; stride < N; stride *= 2) {
+		// each work-item writes its current value to B
 		B[id] = A[id];
+		// if the current work-item id surpasses the stride
 		if (id >= stride)
+		{
+			// add the value from A[id - stride] to B
+			// this will propagate the sums
 			B[id] += A[id - stride];
-
+		}
 		barrier(CLK_GLOBAL_MEM_FENCE); //sync the step
 		
-
+		// updated values in B become the input for the next step
 		C = A; A = B; B = C; //swap A & B between steps
 	}
 }
 ```
-- We can also do a double buffered version.
-- This uses local memory and improves the efficiency.
+- We can also do a double-buffered version.
+- This uses local memory and improves efficiency.
 ```c
 //a double-buffered version of the Hillis-Steele inclusive scan
-//requires two additional input arguments which correspond to two local buffers
+//requires two additional input arguments, which correspond to two local buffers
 kernel void scan_add(__global const int* A, global int* B, local int* scratch_1, local int* scratch_2) {
 	int id = get_global_id(0);
 	int lid = get_local_id(0);
@@ -187,7 +198,7 @@ kernel void scan_add(__global const int* A, global int* B, local int* scratch_1,
 	B[id] = scratch_1[lid];
 }
 ```
-- Uses two local memory buffers which are swapped after each reduction step to avoid data being overwritten. 
+- It uses two local memory buffers swapped after each reduction step to avoid overwriting the data. 
 
 ## Blelloch Scan
 [CUDA OF PREFIX SUMS SCAN](https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda)
