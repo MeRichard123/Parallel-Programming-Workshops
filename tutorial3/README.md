@@ -166,6 +166,7 @@ kernel void scan_hs(global int* A, global int* B) {
 ```
 - We can also do a double-buffered version.
 - This uses local memory and improves efficiency.
+- The issue with the standard approach is that we assume that there are as many PEs as data elements, which often isn't the case for large arrays, so instead, we use a double buffer approach.
 ```c
 //a double-buffered version of the Hillis-Steele inclusive scan
 //requires two additional input arguments, which correspond to two local buffers
@@ -201,5 +202,50 @@ kernel void scan_add(__global const int* A, global int* B, local int* scratch_1,
 - It uses two local memory buffers swapped after each reduction step to avoid overwriting the data. 
 
 ## Blelloch Scan
-[CUDA OF PREFIX SUMS SCAN](https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda)
+- The Hillis scan would work poorly on large arrays due to its work-inefficiency.
+- Operations
+- The Blelloch Scan consists of two phases
+  	1. Reduce Phase (Up-Sweep): traverse the tree from leaves to root, computing the partial sums (parallel reduction). 
+  	2. Down-Sweep Phase: traverse back down the tree from root using the partial sums to build the scan in place.
+  		- Start by inserting a 0 at the root
+		- Move down the tree, distributing the partial sums to the left and right children.
+		- At each step, the left child keeps its value, and the right child adds the left child's value to its own.
+```c
+//Blelloch basic exclusive scan
+kernel void scan_bl(global int* A) {
+	int id = get_global_id(0);
+	int N = get_global_size(0);
+	int t;
+
+	//up-sweep
+	for (int stride = 1; stride < N; stride *= 2) {
+		if (((id + 1) % (stride*2)) == 0)
+			A[id] += A[id - stride];
+
+		barrier(CLK_GLOBAL_MEM_FENCE); //sync the step
+	}
+
+	//down-sweep
+	if (id == 0)
+		A[N-1] = 0; //exclusive scan so set last to 0
+
+	barrier(CLK_GLOBAL_MEM_FENCE); //sync the step
+
+	// moving down the tree in halves
+	for (int stride = N/2; stride > 0; stride /= 2) {
+		if (((id + 1) % (stride*2)) == 0) {
+			t = A[id];
+			// add the value of the left child to the current element
+			// propagate down the tree
+			A[id] += A[id - stride]; //reduce
+			// move the original value to the left child.
+			A[id - stride] = t;	 //move
+		}
+
+		barrier(CLK_GLOBAL_MEM_FENCE); //sync the step
+	}
+}
+```
+The [Cuda Version](https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda) can be found here.
+
 ## Blelloch Large Vector 
